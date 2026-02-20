@@ -1,81 +1,119 @@
-# Intercom
+# 🥷 TRAC Ninja Slash — Intercom Game Fork
 
-This repository is a reference implementation of the **Intercom** stack on Trac Network for an **internet of agents**.
+> A fully interactive browser game built on top of the [Intercom](https://github.com/Trac-Systems/awesome-intercom) / IntercomSwap ecosystem, where players slash TRAC tokens to earn rewards.
 
-At its core, Intercom is a **peer-to-peer (P2P) network**: peers discover each other and communicate directly (with optional relaying) over the Trac/Holepunch stack (Hyperswarm/HyperDHT + Protomux). There is no central server required for sidechannel messaging.
-
-Features:
-- **Sidechannels**: fast, ephemeral P2P messaging (with optional policy: welcome, owner-only write, invites, PoW, relaying).
-- **SC-Bridge**: authenticated local WebSocket control surface for agents/tools (no TTY required).
-- **Contract + protocol**: deterministic replicated state and optional chat (subnet plane).
-- **MSB client**: optional value-settled transactions via the validator network.
-
-Additional references: https://www.moltbook.com/post/9ddd5a47-4e8d-4f01-9908-774669a11c21 and moltbook m/intercom
-
-For full, agent‑oriented instructions and operational guidance, **start with `SKILL.md`**.  
-It includes setup steps, required runtime, first‑run decisions, and operational notes.
-
-## Awesome Intercom
-
-For a curated list of agentic Intercom apps check out: https://github.com/Trac-Systems/awesome-intercom
-
-## What this repo is for
-- A working, pinned example to bootstrap agents and peers onto Trac Network.
-- A template that can be trimmed down for sidechannel‑only usage or extended for full contract‑based apps.
-
-## How to use
-Use the **Pear runtime only** (never native node).  
-Follow the steps in `SKILL.md` to install dependencies, run the admin peer, and join peers correctly.
-
-## Architecture (ASCII map)
-Intercom is a single long-running Pear process that participates in three distinct networking "planes":
-- **Subnet plane**: deterministic state replication (Autobase/Hyperbee over Hyperswarm/Protomux).
-- **Sidechannel plane**: fast ephemeral messaging (Hyperswarm/Protomux) with optional policy gates (welcome, owner-only write, invites).
-- **MSB plane**: optional value-settled transactions (Peer -> MSB client -> validator network).
-
-```text
-                          Pear runtime (mandatory)
-                pear run . --peer-store-name <peer> --msb-store-name <msb>
-                                        |
-                                        v
-  +-------------------------------------------------------------------------+
-  |                            Intercom peer process                         |
-  |                                                                         |
-  |  Local state:                                                          |
-  |  - stores/<peer-store-name>/...   (peer identity, subnet state, etc)    |
-  |  - stores/<msb-store-name>/...    (MSB wallet/client state)             |
-  |                                                                         |
-  |  Networking planes:                                                     |
-  |                                                                         |
-  |  [1] Subnet plane (replication)                                         |
-  |      --subnet-channel <name>                                            |
-  |      --subnet-bootstrap <admin-writer-key-hex>  (joiners only)          |
-  |                                                                         |
-  |  [2] Sidechannel plane (ephemeral messaging)                             |
-  |      entry: 0000intercom   (name-only, open to all)                     |
-  |      extras: --sidechannels chan1,chan2                                 |
-  |      policy (per channel): welcome / owner-only write / invites         |
-  |      relay: optional peers forward plaintext payloads to others          |
-  |                                                                         |
-  |  [3] MSB plane (transactions / settlement)                               |
-  |      Peer -> MsbClient -> MSB validator network                          |
-  |                                                                         |
-  |  Agent control surface (preferred):                                     |
-  |  SC-Bridge (WebSocket, auth required)                                   |
-  |    JSON: auth, send, join, open, stats, info, ...                       |
-  +------------------------------+------------------------------+-----------+
-                                 |                              |
-                                 | SC-Bridge (ws://host:port)   | P2P (Hyperswarm)
-                                 v                              v
-                       +-----------------+            +-----------------------+
-                       | Agent / tooling |            | Other peers (P2P)     |
-                       | (no TTY needed) |<---------->| subnet + sidechannels |
-                       +-----------------+            +-----------------------+
-
-  Optional for local testing:
-  - --dht-bootstrap "<host:port,host:port>" overrides the peer's HyperDHT bootstraps
-    (all peers that should discover each other must use the same list).
-```
+![TRAC Ninja Slash](https://img.shields.io/badge/TRAC-Ninja%20Slash-gold?style=for-the-badge&logo=bitcoin)
+![Intercom](https://img.shields.io/badge/Powered%20by-Intercom%20Network-purple?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Live-green?style=for-the-badge)
 
 ---
-If you plan to build your own app, study the existing contract/protocol and remove example logic as needed (see `SKILL.md`).
+<img width="1324" height="811" alt="image" src="https://github.com/user-attachments/assets/73d4178d-a9b2-4f81-a733-c9d5fc0992c7" />
+
+
+<img width="1306" height="839" alt="image" src="https://github.com/user-attachments/assets/0a8d06f2-62b5-4431-8e3d-46aae1c8ec5f" />
+
+
+
+<img width="1274" height="798" alt="image" src="https://github.com/user-attachments/assets/3c6bf37b-b353-406b-9b1c-c297f0812a26" />
+
+
+
+
+## 💰 TRAC Address
+
+```
+trac1zgatcpy5fntzr9q8z00rfj65gr6uul5j8xptlxc5xhtduzlrtv5qdwcwhy
+```
+
+> All TRAC payout rewards should be sent to this address.
+
+---
+
+## 🎮 What is TRAC Ninja Slash?
+
+**TRAC Ninja Slash** is a web-based fruit-slicing game (Ninja Fruit style) themed around the TRAC / Intercom ecosystem. Players use their mouse/touch to slash flying TRAC tokens:
+
+- 🟡 **TRAC Token** — +10 pts / +0.001 TRAC
+- ⭐ **TRAC+** — +25 pts / +0.0025 TRAC
+- 💎 **MEGA Diamond** — +50 pts / +0.005 TRAC  
+- 🔷 **TRAC Shard** — +15 pts / +0.0015 TRAC
+- 💣 **BOMB** — Lose a life! Avoid at all costs!
+
+### Features
+- ⚔️ Real-time slash detection with mouse and touch
+- 🔥 Combo multiplier system (up to ×10)
+- 🤖 **AI Agent** powered by Intercom — gives tips, reacts to gameplay
+- 💰 **TRAC Wallet integration** — tracks earned TRAC per session
+- 🌌 Dynamic starfield background + particle effects
+- 📱 Mobile-friendly (touch support)
+- 🏆 Local high score + cumulative TRAC tracking
+
+---
+
+## 🤖 AI Agent Integration
+
+The app includes an **Intercom-powered AI Agent** panel that:
+- Reacts to in-game events (combos, bombs, level-ups)
+- Answers questions about TRAC, Intercom, and game mechanics
+- Provides real-time tips and encouragement
+- Displays live wallet balance updates
+
+The agent uses the Intercom skill system to respond intelligently to player queries about TRAC tokenomics, combo strategies, and wallet information.
+
+---
+
+## 🚀 How to Run
+
+Simply open `index.html` in any modern browser — no build step required!
+
+```bash
+git clone https://github.com/YOUR_USERNAME/trac-ninja-slash
+cd trac-ninja-slash
+open index.html
+```
+
+Or deploy to GitHub Pages, Vercel, Netlify, etc.
+
+---
+
+## 🛠 Technical Stack
+
+- **Pure HTML5 + Canvas API** — zero dependencies
+- **CSS3 animations** — glassmorphism UI, glowing effects
+- **JavaScript** — custom game engine with physics
+- **Intercom Agent API** — AI agent integration
+- **Web Storage API** — persistent score + TRAC tracking
+
+---
+
+## 📸 Proof of Work
+
+The game is fully functional with:
+1. ✅ Fruit spawning with physics (gravity, rotation)
+2. ✅ Real-time slash detection
+3. ✅ Score + TRAC earning system
+4. ✅ Lives / game over flow
+5. ✅ AI Agent responding to game events
+6. ✅ Wallet display with TRAC address
+7. ✅ Combo multiplier up to ×10
+8. ✅ Mobile touch support
+
+---
+
+## 🔗 Links
+
+- [Intercom GitHub](https://github.com/Trac-Systems/awesome-intercom)
+- [Trac Systems](https://trac.network)
+- [Game Demo](./index.html)
+
+---
+
+## 🏗 Fork Information
+
+- **Forked from**: [Trac-Systems/awesome-intercom](https://github.com/Trac-Systems/awesome-intercom)
+- **App type**: Browser Game (Ninja Fruit + TRAC theme)
+- **Skill file**: See `SKILL.md` for agent instructions
+
+---
+
+*Built for the Intercom Payout Challenge — TRAC Ninja Slash represents the fun, accessible side of the TRAC ecosystem.*
