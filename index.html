@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRAC Ninja Slash — Powered by Intercom</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+JP:wght@300;400;700&display=swap');
+
+  :root {
+    --trac-gold: #FFD700;
+    --trac-orange: #FF6B00;
+    --trac-red: #FF1744;
+    --trac-cyan: #00E5FF;
+    --trac-purple: #7C3AED;
+    --bg-dark: #0A0A0F;
+    --bg-card: #12121A;
+    --ink: #1a0a00;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg-dark);
+    color: #fff;
+    font-family: 'Noto Sans JP', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    cursor: crosshair;
+  }
+
+  /* BACKGROUND */
+  #bg-canvas {
+    position: fixed; inset: 0; z-index: 0;
+  }
+
+  /* GAME CANVAS */
+  #game-canvas {
+    position: fixed; inset: 0; z-index: 1;
+  }
+
+  /* UI OVERLAY */
+  #ui {
+    position: fixed; inset: 0; z-index: 10;
+    pointer-events: none;
+  }
+
+  /* HUD */
+  #hud {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 16px 24px;
+    pointer-events: none;
+  }
+
+  .hud-panel {
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 8px;
+    padding: 8px 16px;
+    backdrop-filter: blur(10px);
+  }
+
+  .hud-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    color: var(--trac-gold);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  .hud-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 24px;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 20px var(--trac-gold);
+  }
+
+  .hud-sub {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    color: var(--trac-cyan);
+  }
+
+  /* Lives */
+  #lives-display {
+    font-size: 20px;
+    letter-spacing: 4px;
+  }
+
+  /* COMBO */
+  #combo-display {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Orbitron', monospace;
+    font-size: 48px;
+    font-weight: 900;
+    color: var(--trac-gold);
+    text-shadow: 0 0 40px var(--trac-orange), 0 0 80px rgba(255,107,0,0.5);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 20;
+  }
+
+  /* SCREENS */
+  .screen {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.92);
+    backdrop-filter: blur(20px);
+  }
+
+  .screen.hidden { display: none; }
+
+  /* TITLE SCREEN */
+  .title-logo {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    text-align: center;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .title-logo .trac {
+    font-size: clamp(60px, 12vw, 120px);
+    background: linear-gradient(135deg, var(--trac-gold), var(--trac-orange), var(--trac-red));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: block;
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  .title-logo .ninja {
+    font-size: clamp(30px, 6vw, 60px);
+    color: var(--trac-cyan);
+    letter-spacing: 12px;
+    display: block;
+  }
+
+  .title-logo .slash {
+    font-size: clamp(18px, 3vw, 28px);
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 6px;
+    display: block;
+    margin-top: 4px;
+  }
+
+  @keyframes pulse-glow {
+    0%,100% { filter: drop-shadow(0 0 20px rgba(255,215,0,0.5)); }
+    50% { filter: drop-shadow(0 0 60px rgba(255,107,0,0.8)); }
+  }
+
+  .kanji-deco {
+    font-size: 200px;
+    position: absolute;
+    opacity: 0.03;
+    font-family: 'Noto Sans JP';
+    color: #fff;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .start-btn {
+    font-family: 'Orbitron', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--bg-dark);
+    background: linear-gradient(135deg, var(--trac-gold), var(--trac-orange));
+    border: none;
+    padding: 18px 48px;
+    border-radius: 4px;
+    cursor: pointer;
+    pointer-events: all;
+    margin-top: 32px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .start-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.3), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .start-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 40px rgba(255,107,0,0.6);
+  }
+  .start-btn:hover::before { opacity: 1; }
+  .start-btn:active { transform: translateY(0); }
+
+  .subtitle {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--trac-cyan);
+    margin-top: 12px;
+    opacity: 0.7;
+  }
+
+  /* AI AGENT PANEL */
+  #agent-panel {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    width: 300px;
+    z-index: 30;
+    pointer-events: all;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  #agent-panel.collapsed {
+    transform: translateY(calc(100% - 44px));
+  }
+
+  .agent-header {
+    background: linear-gradient(90deg, var(--trac-purple), #4C1D95);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    border-top: 1px solid rgba(124,58,237,0.5);
+  }
+
+  .agent-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .agent-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #4ADE80;
+    animation: blink 1.5s infinite;
+  }
+
+  @keyframes blink {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .agent-body {
+    background: rgba(10,10,20,0.95);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-top: none;
+    height: 220px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #agent-messages {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+    font-size: 12px;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.8);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124,58,237,0.5) transparent;
+  }
+
+  .agent-msg {
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform: none; } }
+
+  .agent-msg.ai {
+    background: rgba(124,58,237,0.2);
+    border-left: 2px solid var(--trac-purple);
+  }
+
+  .agent-msg.system {
+    background: rgba(255,215,0,0.1);
+    border-left: 2px solid var(--trac-gold);
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    color: var(--trac-gold);
+  }
+
+  #agent-input-row {
+    display: flex;
+    border-top: 1px solid rgba(124,58,237,0.3);
+    padding: 8px;
+    gap: 6px;
+  }
+
+  #agent-input {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(124,58,237,0.4);
+    border-radius: 4px;
+    padding: 6px 10px;
+    color: #fff;
+    font-size: 11px;
+    font-family: 'Noto Sans JP', sans-serif;
+    outline: none;
+  }
+
+  #agent-input::placeholder { color: rgba(255,255,255,0.3); }
+  #agent-input:focus { border-color: var(--trac-purple); }
+
+  #agent-send {
+    background: var(--trac-purple);
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  #agent-send:hover { background: #6D28D9; }
+
+  /* TRAC WALLET PANEL */
+  #wallet-panel {
+    position: fixed;
+    top: 80px;
+    right: 24px;
+    z-index: 30;
+    pointer-events: all;
+  }
+
+  .wallet-card {
+    background: rgba(12,12,20,0.9);
+    border: 1px solid rgba(255,215,0,0.2);
+    border-radius: 12px;
+    padding: 12px 16px;
+    backdrop-filter: blur(20px);
+    min-width: 200px;
+  }
+
+  .wallet-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--trac-gold);
+    margin-bottom: 8px;
+    opacity: 0.7;
+  }
+
+  .wallet-addr {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    color: var(--trac-cyan);
+    word-break: break-all;
+    margin-bottom: 8px;
+    line-height: 1.5;
+  }
+
+  .wallet-balance {
+    font-family: 'Orbitron', monospace;
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--trac-gold);
+    text-shadow: 0 0 15px rgba(255,215,0,0.5);
+  }
+
+  .wallet-badge {
+    display: inline-block;
+    font-size: 9px;
+    background: rgba(255,215,0,0.15);
+    color: var(--trac-gold);
+    border: 1px solid rgba(255,215,0,0.3);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Orbitron', monospace;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  /* GAME OVER */
+  #gameover-screen .title-logo .trac {
+    font-size: 60px;
+  }
+
+  .go-score {
+    font-family: 'Orbitron', monospace;
+    font-size: 48px;
+    font-weight: 900;
+    color: var(--trac-gold);
+    margin: 16px 0;
+    text-shadow: 0 0 30px rgba(255,215,0,0.6);
+  }
+
+  .go-sub {
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    color: var(--trac-cyan);
+    letter-spacing: 3px;
+    margin-bottom: 24px;
+  }
+
+  .trac-earned {
+    background: rgba(255,215,0,0.1);
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    color: var(--trac-gold);
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  .trac-earned span {
+    font-size: 28px;
+    font-weight: 900;
+    display: block;
+    margin-top: 4px;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .btn-secondary {
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: var(--trac-cyan);
+    background: transparent;
+    border: 1px solid rgba(0,229,255,0.4);
+    padding: 14px 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    pointer-events: all;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover {
+    background: rgba(0,229,255,0.1);
+    border-color: var(--trac-cyan);
+  }
+
+  /* SLICE EFFECT */
+  .slice-line {
+    position: fixed;
+    pointer-events: none;
+    z-index: 100;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent);
+    height: 2px;
+    transform-origin: left center;
+  }
+
+  /* INSTRUCTIONS */
+  .instructions {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 2px;
+    text-align: center;
+    margin-top: 24px;
+    line-height: 2;
+  }
+
+  /* PAUSE */
+  #pause-btn {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    pointer-events: all;
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.5);
+    padding: 6px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    display: none;
+  }
+
+  #pause-btn.active { display: block; }
+
+  .floating-trac {
+    position: fixed;
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--trac-gold);
+    pointer-events: none;
+    z-index: 200;
+    text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    animation: float-up 1.2s ease-out forwards;
+  }
+
+  @keyframes float-up {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-80px); }
+  }
+
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<canvas id="game-canvas"></canvas>
+
+<div id="ui">
+  <div id="hud">
+    <div class="hud-panel">
+      <div class="hud-label">Score</div>
+      <div class="hud-value" id="score-display">0</div>
+      <div class="hud-sub" id="trac-display">+0.00 TRAC</div>
+    </div>
+    <div class="hud-panel" style="text-align:center">
+      <div class="hud-label">Combo</div>
+      <div class="hud-value" id="combo-hud">x1</div>
+    </div>
+    <div class="hud-panel" style="text-align:right">
+      <div class="hud-label">Lives</div>
+      <div id="lives-display">⚔️⚔️⚔️</div>
+    </div>
+  </div>
+</div>
+
+<div id="combo-display">⚡ COMBO ×5</div>
+
+<!-- WALLET -->
+<div id="wallet-panel">
+  <div class="wallet-card">
+    <div class="wallet-title">TRAC WALLET</div>
+    <div class="wallet-addr" id="wallet-addr">bc1p...intercom</div>
+    <div class="wallet-balance"><span id="wallet-bal">0.00</span> TRAC</div>
+    <div class="wallet-badge">INTERCOM NETWORK</div>
+  </div>
+</div>
+
+<!-- AI AGENT -->
+<div id="agent-panel" class="collapsed">
+  <div class="agent-header" onclick="toggleAgent()">
+    <div class="agent-title">
+      <div class="agent-dot"></div>
+      TRAC AI AGENT
+    </div>
+    <span style="font-size:12px; opacity:0.6" id="agent-toggle-icon">▲</span>
+  </div>
+  <div class="agent-body">
+    <div id="agent-messages">
+      <div class="agent-msg system">AGENT ONLINE — INTERCOM v1.0</div>
+      <div class="agent-msg ai">Selamat datang, Ninja! Aku TRAC Agent. Slash token untuk kumpulkan TRAC. Hindari BOMB! 忍者のように戦え！</div>
+    </div>
+    <div id="agent-input-row">
+      <input id="agent-input" type="text" placeholder="Tanya AI Agent..." maxlength="100">
+      <button id="agent-send" onclick="sendToAgent()">ASK</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAUSE BTN -->
+<button id="pause-btn" onclick="togglePause()">⏸ PAUSE</button>
+
+<!-- TITLE SCREEN -->
+<div id="title-screen" class="screen">
+  <div class="kanji-deco" style="top:-40px; left:-40px">忍</div>
+  <div class="kanji-deco" style="bottom:-40px; right:-40px">刀</div>
+  <div class="title-logo">
+    <span class="trac">TRAC</span>
+    <span class="ninja">NINJA</span>
+    <span class="slash">SLASH</span>
+  </div>
+  <p style="color:rgba(255,255,255,0.4); font-size:13px; margin-top:8px; font-family:'Orbitron',monospace; letter-spacing:2px;">POWERED BY INTERCOM NETWORK</p>
+  <button class="start-btn" onclick="startGame()">START SLASHING</button>
+  <p class="instructions">
+    SWIPE TO SLASH TRAC TOKENS<br>
+    AVOID BOMBS · COMBO FOR BONUS<br>
+    EARN REAL TRAC REWARDS
+  </p>
+</div>
+
+<!-- GAME OVER SCREEN -->
+<div id="gameover-screen" class="screen hidden">
+  <div class="kanji-deco" style="top:20%; left:10%">敗</div>
+  <div class="title-logo">
+    <span class="trac" style="font-size:50px">GAME</span>
+    <span class="ninja" style="font-size:30px; letter-spacing:6px">OVER</span>
+  </div>
+  <div class="go-score" id="go-score">0</div>
+  <div class="go-sub">FINAL SCORE</div>
+  <div class="trac-earned">
+    TRAC EARNED THIS SESSION
+    <span id="go-trac">0.00 TRAC</span>
+  </div>
+  <div class="btn-row">
+    <button class="start-btn" onclick="restartGame()">PLAY AGAIN</button>
+    <button class="btn-secondary" onclick="shareScore()">SHARE</button>
+  </div>
+</div>
+
+<script>
+// ========== GAME STATE ==========
+const state = {
+  score: 0,
+  combo: 1,
+  comboTimer: 0,
+  lives: 3,
+  tracEarned: 0,
+  running: false,
+  paused: false,
+  fruits: [],
+  particles: [],
+  sliceTrail: [],
+  mouseX: 0,
+  mouseY: 0,
+  lastMouseX: 0,
+  lastMouseY: 0,
+  frame: 0,
+  spawnRate: 80,
+  level: 1,
+  highScore: parseInt(localStorage.getItem('nts_hs') || '0'),
+};
+
+// TRAC TOKEN CONFIG (fake addresses for demo)
+const TRAC_WALLET = "bc1p8dfc7x2a4n3s9t6r8c0i5n7t8e2r9c0o9m";
+let totalTracEarned = parseFloat(localStorage.getItem('nts_trac') || '0');
+
+// Canvas setup
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  bgCanvas.width = canvas.width = window.innerWidth;
+  bgCanvas.height = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Update wallet display
+document.getElementById('wallet-addr').textContent = TRAC_WALLET.slice(0,8) + '...' + TRAC_WALLET.slice(-8);
+document.getElementById('wallet-bal').textContent = totalTracEarned.toFixed(4);
+
+// ========== FRUIT TYPES ==========
+const FRUIT_TYPES = [
+  { name: 'TRAC',   emoji: '🟡', color: '#FFD700', value: 10,  tracValue: 0.001,  size: 45, isBomb: false },
+  { name: 'TRAC+',  emoji: '⭐', color: '#FF6B00', value: 25,  tracValue: 0.0025, size: 40, isBomb: false },
+  { name: 'MEGA',   emoji: '💎', color: '#00E5FF', value: 50,  tracValue: 0.005,  size: 55, isBomb: false },
+  { name: 'SHARD',  emoji: '🔷', color: '#7C3AED', value: 15,  tracValue: 0.0015, size: 35, isBomb: false },
+  { name: 'BOMB',   emoji: '💣', color: '#FF1744', value: -1,  tracValue: 0,      size: 48, isBomb: true  },
+];
+
+// ========== SPAWN FRUIT ==========
+function spawnFruit() {
+  const W = canvas.width;
+  const H = canvas.height;
+  const typeWeights = [40, 25, 10, 20, state.level < 3 ? 5 : 15];
+  const total = typeWeights.reduce((a,b) => a+b, 0);
+  let r = Math.random() * total;
+  let typeIdx = 0;
+  for (let i = 0; i < typeWeights.length; i++) {
+    r -= typeWeights[i]; if (r <= 0) { typeIdx = i; break; }
+  }
+  const type = FRUIT_TYPES[typeIdx];
+  const x = 80 + Math.random() * (W - 160);
+  const speedY = -(12 + Math.random() * 8 + state.level * 0.5);
+  const speedX = (Math.random() - 0.5) * 4;
+  state.fruits.push({
+    x, y: H + 60,
+    vx: speedX, vy: speedY,
+    size: type.size,
+    rotation: Math.random() * Math.PI * 2,
+    rotSpeed: (Math.random() - 0.5) * 0.08,
+    type, sliced: false,
+    opacity: 1,
+    glowPhase: Math.random() * Math.PI * 2,
+  });
+}
+
+// ========== DRAW FRUIT ==========
+function drawFruit(f) {
+  if (f.opacity <= 0) return;
+  const { x, y, size, rotation, type, opacity, glowPhase } = f;
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  ctx.translate(x, y);
+  ctx.rotate(rotation);
+
+  // Glow
+  if (!f.sliced) {
+    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
+    const glowAlpha = 0.3 + 0.2 * Math.sin(state.frame * 0.05 + glowPhase);
+    glow.addColorStop(0, type.color + '80');
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Body circle
+  const gradient = ctx.createRadialGradient(-size*0.2, -size*0.2, 0, 0, 0, size * 0.8);
+  gradient.addColorStop(0, lightenColor(type.color, 40));
+  gradient.addColorStop(1, darkenColor(type.color, 30));
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(0, 0, size * 0.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Border
+  ctx.strokeStyle = type.color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Emoji
+  ctx.rotate(-rotation);
+  ctx.font = `${size * 0.9}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(type.emoji, 0, 2);
+
+  // Label
+  ctx.font = `bold ${size * 0.25}px "Orbitron", monospace`;
+  ctx.fillStyle = '#fff';
+  ctx.fillText(type.name, 0, size * 0.9);
+
+  ctx.restore();
+}
+
+// ========== PARTICLES ==========
+function createSliceParticles(x, y, color, count = 12) {
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 / count) * i + Math.random() * 0.3;
+    const speed = 3 + Math.random() * 6;
+    state.particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      color,
+      size: 3 + Math.random() * 5,
+      life: 1,
+      decay: 0.03 + Math.random() * 0.04,
+      type: Math.random() < 0.5 ? 'circle' : 'spark',
+    });
+  }
+  // Gold coin particles for TRAC
+  for (let i = 0; i < 5; i++) {
+    state.particles.push({
+      x: x + (Math.random()-0.5) * 20,
+      y: y + (Math.random()-0.5) * 20,
+      vx: (Math.random()-0.5) * 4,
+      vy: -3 - Math.random() * 4,
+      color: '#FFD700',
+      size: 2 + Math.random() * 3,
+      life: 1,
+      decay: 0.02,
+      type: 'trac',
+    });
+  }
+}
+
+function updateParticles() {
+  for (let i = state.particles.length - 1; i >= 0; i--) {
+    const p = state.particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.15;
+    p.life -= p.decay;
+    if (p.life <= 0) state.particles.splice(i, 1);
+  }
+}
+
+function drawParticles() {
+  for (const p of state.particles) {
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    if (p.type === 'spark') {
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = p.size * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(p.x - p.vx*2, p.y - p.vy*2);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    } else if (p.type === 'trac') {
+      ctx.font = `${p.size * 3}px "Orbitron"`;
+      ctx.fillStyle = '#FFD700';
+      ctx.fillText('₮', p.x, p.y);
+    } else {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+// ========== SLICE DETECTION ==========
+let isMouseDown = false;
+const sliceHistory = [];
+
+canvas.addEventListener('mousedown', (e) => { isMouseDown = true; sliceHistory.length = 0; });
+canvas.addEventListener('mouseup', () => { isMouseDown = false; sliceHistory.length = 0; });
+canvas.addEventListener('mousemove', (e) => {
+  state.lastMouseX = state.mouseX;
+  state.lastMouseY = state.mouseY;
+  state.mouseX = e.clientX;
+  state.mouseY = e.clientY;
+
+  if (isMouseDown) {
+    sliceHistory.push({ x: e.clientX, y: e.clientY, t: Date.now() });
+    if (sliceHistory.length > 20) sliceHistory.shift();
+    checkSlice(state.lastMouseX, state.lastMouseY, e.clientX, e.clientY);
+  }
+});
+
+// Touch support
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const t = e.touches[0];
+  checkSlice(state.mouseX, state.mouseY, t.clientX, t.clientY);
+  state.mouseX = t.clientX; state.mouseY = t.clientY;
+}, { passive: false });
+
+function checkSlice(x1, y1, x2, y2) {
+  if (!state.running || state.paused) return;
+  let slicedAny = false;
+  for (const f of state.fruits) {
+    if (f.sliced) continue;
+    const dx = x2 - f.x, dy = y2 - f.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < f.size * 0.9) {
+      sliceF(f, x2, y2);
+      slicedAny = true;
+    }
+  }
+}
+
+function sliceF(f, sx, sy) {
+  if (f.sliced) return;
+  f.sliced = true;
+
+  if (f.type.isBomb) {
+    // BOMB!
+    createSliceParticles(f.x, f.y, '#FF1744', 20);
+    state.lives--;
+    state.combo = 1;
+    updateHUD();
+    showFloating(f.x, f.y, '💥 -1 LIFE', '#FF1744');
+    addAgentMessage(`⚠️ BOMB! Lives left: ${state.lives}. Be careful, ninja!`, 'ai');
+    if (state.lives <= 0) endGame();
+    return;
+  }
+
+  // Regular fruit
+  const pts = Math.round(f.type.value * state.combo);
+  const trac = f.type.tracValue * state.combo;
+  state.score += pts;
+  state.tracEarned += trac;
+  totalTracEarned += trac;
+  state.comboTimer = 90;
+  state.combo = Math.min(state.combo + 0.5, 10);
+
+  createSliceParticles(f.x, f.y, f.type.color);
+  showFloating(f.x, f.y, `+${pts} pts`, f.type.color);
+  if (state.combo >= 3) showFloating(f.x - 40, f.y + 30, `x${state.combo.toFixed(1)} COMBO!`, '#FFD700');
+
+  updateHUD();
+
+  // Agent reacts to high combo
+  if (Math.floor(state.combo) % 3 === 0 && state.combo >= 3) {
+    const msgs = [
+      `🔥 Combo ×${Math.floor(state.combo)}! TRAC tokens are flowing!`,
+      `⚡ Incredible slash! The Intercom network feels your power!`,
+      `💎 ${f.type.name} sliced! +${trac.toFixed(4)} TRAC earned!`,
+      `忍 Ninja level increasing! Keep slashing!`,
+    ];
+    addAgentMessage(msgs[Math.floor(Math.random()*msgs.length)], 'ai');
+  }
+
+  localStorage.setItem('nts_trac', totalTracEarned.toFixed(6));
+  document.getElementById('wallet-bal').textContent = totalTracEarned.toFixed(4);
+}
+
+function showFloating(x, y, text, color) {
+  const el = document.createElement('div');
+  el.className = 'floating-trac';
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.style.color = color;
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1300);
+}
+
+// ========== BACKGROUND ==========
+const stars = Array.from({length: 150}, () => ({
+  x: Math.random(), y: Math.random(),
+  size: Math.random() * 1.5,
+  speed: 0.0002 + Math.random() * 0.0003,
+  opacity: 0.3 + Math.random() * 0.7,
+}));
+
+function drawBackground() {
+  const W = bgCanvas.width, H = bgCanvas.height;
+  bgCtx.fillStyle = '#0A0A0F';
+  bgCtx.fillRect(0, 0, W, H);
+
+  // Gradient vignette
+  const vig = bgCtx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W,H)*0.7);
+  vig.addColorStop(0, 'rgba(10,0,30,0)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.8)');
+  bgCtx.fillStyle = vig;
+  bgCtx.fillRect(0, 0, W, H);
+
+  // Stars
+  for (const s of stars) {
+    s.y -= s.speed;
+    if (s.y < 0) { s.y = 1; s.x = Math.random(); }
+    bgCtx.beginPath();
+    bgCtx.arc(s.x * W, s.y * H, s.size, 0, Math.PI * 2);
+    bgCtx.fillStyle = `rgba(255,255,255,${s.opacity})`;
+    bgCtx.fill();
+  }
+
+  // Grid lines (subtle)
+  bgCtx.strokeStyle = 'rgba(124,58,237,0.05)';
+  bgCtx.lineWidth = 1;
+  const gridSize = 80;
+  for (let x = 0; x < W; x += gridSize) {
+    bgCtx.beginPath(); bgCtx.moveTo(x, 0); bgCtx.lineTo(x, H); bgCtx.stroke();
+  }
+  for (let y = 0; y < H; y += gridSize) {
+    bgCtx.beginPath(); bgCtx.moveTo(0, y); bgCtx.lineTo(W, y); bgCtx.stroke();
+  }
+}
+
+// ========== SLICE TRAIL ==========
+function drawSliceTrail() {
+  if (!isMouseDown || sliceHistory.length < 2) return;
+  const now = Date.now();
+  ctx.save();
+  ctx.lineCap = 'round';
+  for (let i = 1; i < sliceHistory.length; i++) {
+    const age = (now - sliceHistory[i].t) / 200;
+    if (age > 1) continue;
+    const alpha = 1 - age;
+    ctx.beginPath();
+    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.8})`;
+    ctx.lineWidth = (1 - age) * 4 + 1;
+    ctx.moveTo(sliceHistory[i-1].x, sliceHistory[i-1].y);
+    ctx.lineTo(sliceHistory[i].x, sliceHistory[i].y);
+    ctx.stroke();
+
+    // Gold shimmer on trail
+    if (i % 2 === 0) {
+      ctx.strokeStyle = `rgba(255, 215, 0, ${alpha * 0.4})`;
+      ctx.lineWidth = (1 - age) * 8;
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+// ========== HUD UPDATE ==========
+function updateHUD() {
+  document.getElementById('score-display').textContent = state.score.toLocaleString();
+  document.getElementById('trac-display').textContent = `+${state.tracEarned.toFixed(4)} TRAC`;
+  document.getElementById('combo-hud').textContent = `x${Math.floor(state.combo)}`;
+
+  const lives = ['⚔️⚔️⚔️','⚔️⚔️','⚔️',''][3 - state.lives] ?? '';
+  document.getElementById('lives-display').textContent = lives || '💀';
+}
+
+// ========== GAME LOOP ==========
+function gameLoop() {
+  if (!state.running || state.paused) return requestAnimationFrame(gameLoop);
+
+  state.frame++;
+  drawBackground();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Spawn
+  const sr = Math.max(30, state.spawnRate - state.level * 5);
+  if (state.frame % sr === 0) spawnFruit();
+
+  // Level up
+  if (state.score > state.level * 500) {
+    state.level++;
+    addAgentMessage(`🥷 Level ${state.level}! Faster tokens incoming!`, 'system');
+  }
+
+  // Combo decay
+  if (state.comboTimer > 0) {
+    state.comboTimer--;
+  } else if (state.combo > 1) {
+    state.combo = Math.max(1, state.combo - 0.02);
+    updateHUD();
+  }
+
+  // Update fruits
+  for (let i = state.fruits.length - 1; i >= 0; i--) {
+    const f = state.fruits[i];
+    f.vy += 0.25; // gravity
+    f.x += f.vx;
+    f.y += f.vy;
+    f.rotation += f.rotSpeed;
+
+    if (f.sliced) {
+      f.opacity -= 0.06;
+      f.vy += 1;
+      if (f.opacity <= 0) { state.fruits.splice(i, 1); continue; }
+    }
+
+    // Miss detection
+    if (!f.sliced && f.y > canvas.height + 100) {
+      if (!f.type.isBomb) {
+        state.lives--;
+        state.combo = 1;
+        updateHUD();
+        if (state.lives <= 0) { endGame(); return; }
+      }
+      state.fruits.splice(i, 1);
+      continue;
+    }
+
+    drawFruit(f);
+  }
+
+  updateParticles();
+  drawParticles();
+  drawSliceTrail();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ========== GAME CONTROL ==========
+function startGame() {
+  document.getElementById('title-screen').classList.add('hidden');
+  document.getElementById('pause-btn').classList.add('active');
+  state.score = 0; state.combo = 1; state.comboTimer = 0;
+  state.lives = 3; state.tracEarned = 0;
+  state.fruits = []; state.particles = [];
+  state.frame = 0; state.level = 1;
+  state.running = true;
+  updateHUD();
+  drawBackground();
+  addAgentMessage('⚔️ Game started! Slash those TRAC tokens! 忍！', 'system');
+  requestAnimationFrame(gameLoop);
+}
+
+function restartGame() {
+  document.getElementById('gameover-screen').classList.add('hidden');
+  startGame();
+}
+
+function endGame() {
+  state.running = false;
+  document.getElementById('pause-btn').classList.remove('active');
+  const hs = Math.max(state.score, state.highScore);
+  localStorage.setItem('nts_hs', hs);
+  document.getElementById('go-score').textContent = state.score.toLocaleString();
+  document.getElementById('go-trac').textContent = state.tracEarned.toFixed(6) + ' TRAC';
+  document.getElementById('gameover-screen').classList.remove('hidden');
+  addAgentMessage(`Game over! Score: ${state.score} | TRAC earned: ${state.tracEarned.toFixed(6)}. Your TRAC has been recorded to wallet!`, 'ai');
+  localStorage.setItem('nts_trac', totalTracEarned.toFixed(6));
+  document.getElementById('wallet-bal').textContent = totalTracEarned.toFixed(4);
+}
+
+function togglePause() {
+  state.paused = !state.paused;
+  document.getElementById('pause-btn').textContent = state.paused ? '▶ RESUME' : '⏸ PAUSE';
+  if (!state.paused) requestAnimationFrame(gameLoop);
+}
+
+function shareScore() {
+  const txt = `🥷 TRAC Ninja Slash — Score: ${state.score} | +${state.tracEarned.toFixed(4)} TRAC earned! Play on Intercom Network!`;
+  if (navigator.share) navigator.share({ title: 'TRAC Ninja Slash', text: txt });
+  else { navigator.clipboard.writeText(txt); alert('Score copied to clipboard!'); }
+}
+
+// ========== AI AGENT ==========
+let agentCollapsed = true;
+
+function toggleAgent() {
+  agentCollapsed = !agentCollapsed;
+  const panel = document.getElementById('agent-panel');
+  const icon = document.getElementById('agent-toggle-icon');
+  panel.classList.toggle('collapsed', agentCollapsed);
+  icon.textContent = agentCollapsed ? '▲' : '▼';
+}
+
+function addAgentMessage(text, type = 'ai') {
+  const msgs = document.getElementById('agent-messages');
+  const div = document.createElement('div');
+  div.className = `agent-msg ${type}`;
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Auto-open panel for important messages
+  if (type === 'system') {
+    agentCollapsed = false;
+    document.getElementById('agent-panel').classList.remove('collapsed');
+    document.getElementById('agent-toggle-icon').textContent = '▼';
+  }
+}
+
+const AGENT_RESPONSES = {
+  'trac': 'TRAC is the native token of the Trac Systems / Intercom network. Each slice earns you real TRAC rewards!',
+  'intercom': 'Intercom is a peer-to-peer communication protocol built on Bitcoin Ordinals / TRAC ecosystem.',
+  'bomb': 'Avoid bombs at all costs! They cost you a life and reset your combo multiplier.',
+  'combo': 'Build combos by slashing multiple tokens quickly! Higher combo = more TRAC per slash!',
+  'score': `Your current score is ${() => state.score}. Keep slashing!`,
+  'help': 'Slash coins to earn TRAC. Avoid bombs. Build combos for multipliers. Check your wallet for earned TRAC!',
+  'wallet': `Your TRAC wallet: ${TRAC_WALLET}. Total earned: ${() => totalTracEarned.toFixed(6)} TRAC`,
+  'ninja': '忍 — The way of the ninja is patience and precision. Time your slashes well!',
+};
+
+function sendToAgent() {
+  const input = document.getElementById('agent-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  addAgentMessage(`You: ${msg}`, 'system');
+  input.value = '';
+
+  // Simple AI response
+  const lower = msg.toLowerCase();
+  let response = null;
+  for (const [key, val] of Object.entries(AGENT_RESPONSES)) {
+    if (lower.includes(key)) {
+      response = typeof val === 'function' ? val() : val;
+      break;
+    }
+  }
+
+  if (!response) {
+    const defaults = [
+      `Interesting question, ninja! Focus on slashing TRAC tokens to maximize rewards.`,
+      `The Intercom network rewards skilled ninjas like you. Keep playing!`,
+      `Your current score is ${state.score}. You've earned ${state.tracEarned.toFixed(4)} TRAC this session!`,
+      `Pro tip: Slash multiple tokens in quick succession to build combos!`,
+      `The blockchain never sleeps, ninja. Neither should your blade! ⚔️`,
+    ];
+    response = defaults[Math.floor(Math.random() * defaults.length)];
+  }
+
+  setTimeout(() => addAgentMessage(response, 'ai'), 400 + Math.random()*600);
+}
+
+document.getElementById('agent-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendToAgent();
+});
+
+// ========== COLOR HELPERS ==========
+function lightenColor(hex, amount) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgb(${Math.min(255,r+amount)},${Math.min(255,g+amount)},${Math.min(255,b+amount)})`;
+}
+function darkenColor(hex, amount) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgb(${Math.max(0,r-amount)},${Math.max(0,g-amount)},${Math.max(0,b-amount)})`;
+}
+
+// ========== INIT ==========
+drawBackground();
+
+// Ambient agent message
+setInterval(() => {
+  if (state.running && !state.paused && Math.random() < 0.3) {
+    const tips = [
+      '💡 Slash faster for higher combos!',
+      `📊 High score: ${parseInt(localStorage.getItem('nts_hs')||0)}`,
+      `💰 Total TRAC earned all-time: ${totalTracEarned.toFixed(4)}`,
+      '⚡ Diamond tokens = 5x TRAC value!',
+      '🎯 Orange tokens give bonus multipliers!',
+    ];
+    addAgentMessage(tips[Math.floor(Math.random()*tips.length)], 'ai');
+  }
+}, 15000);
+
+</script>
+</body>
+</html>
